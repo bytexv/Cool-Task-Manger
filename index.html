@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Stylish Task Manager">
+    <title>Task Manager</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .progress-container {
+            width: 100%;
+            background-color: #f0f0f0;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .progress-bar {
+            width: 0%;
+            height: 20px;
+            background-color: #4CAF50;
+            border-radius: 5px;
+            transition: width 0.3s ease;
+        }
+        .task-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 5px 0;
+        }
+        .remove-btn {
+            background-color: #ff4444;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .completed {
+            color: gray;
+            font-style: italic;
+            text-decoration: line-through;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav>
+           
+        </nav>
+    </header>
+
+    <main>
+        <div class="container">
+            <h1>Task Manager</h1>
+            <p>Score: <span id="score">0</span></p>
+            <input type="text" class="task-input" placeholder="Add a new task">
+            <button class="add-task-btn" onclick="addTask()">Add Task</button>
+            <ul class="task-list">
+                
+            </ul>
+            <div class="progress-container">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+            <div id="progress-text">Completed: 0/0 tasks</div>
+            <button class="clear-btn" onclick="clearTasks()">Clear Tasks</button>
+        </div>
+    </main>
+
+    <div class="cookie-banner">
+        <div class="cookie-text">
+            We use cookies to save your tasks and preferences. Do you accept cookies?
+        </div>
+        <div class="cookie-buttons">
+            <button class="accept-cookies" onclick="acceptCookies()">Accept</button>
+            <button class="decline-cookies" onclick="declineCookies()">Decline</button>
+        </div>
+    </div>
+
+    <footer>
+    </footer>
+
+    <script>
+        let totalTasks = 0;
+        let completedTasks = 0;
+        let score = 0;
+        let cookiesAccepted = false;
+
+        function showCookieBanner() {
+            if (!localStorage.getItem('cookiePreference')) {
+                document.querySelector('.cookie-banner').classList.add('show');
+            } else {
+                cookiesAccepted = localStorage.getItem('cookiePreference') === 'accepted';
+                if (cookiesAccepted) {
+                    loadSavedData();
+                }
+            }
+        }
+
+        function acceptCookies() {
+            cookiesAccepted = true;
+            localStorage.setItem('cookiePreference', 'accepted');
+            document.querySelector('.cookie-banner').classList.remove('show');
+            saveData();
+        }
+
+        function declineCookies() {
+            cookiesAccepted = false;
+            localStorage.setItem('cookiePreference', 'declined');
+            document.querySelector('.cookie-banner').classList.remove('show');
+        }
+
+        function saveData() {
+            if (!cookiesAccepted) return;
+            
+            const tasks = [];
+            document.querySelectorAll('.task-item').forEach(item => {
+                tasks.push({
+                    text: item.querySelector('.task-text').textContent,
+                    completed: item.querySelector('input[type="checkbox"]').checked
+                });
+            });
+
+            localStorage.setItem('tasks', JSON.stringify(tasks));
+            localStorage.setItem('score', score.toString());
+        }
+
+        function loadSavedData() {
+            const savedTasks = localStorage.getItem('tasks');
+            const savedScore = localStorage.getItem('score');
+
+            if (savedTasks) {
+                JSON.parse(savedTasks).forEach(task => {
+                    addTask(task.text, task.completed);
+                });
+            }
+
+            if (savedScore) {
+                score = parseInt(savedScore);
+                document.getElementById('score').textContent = score;
+            }
+        }
+
+        function updateProgress() {
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progress-text');
+            const percentage = totalTasks === 0 ? 0 : (completedTasks / totalTasks) * 100;
+            progressBar.style.width = percentage + '%';
+            progressText.textContent = `Completed: ${completedTasks}/${totalTasks} tasks`;
+            document.getElementById('score').textContent = score;
+            if (cookiesAccepted) {
+                saveData();
+            }
+        }
+
+        function addTask(taskText = null, isCompleted = false) {
+            const taskInput = document.querySelector('.task-input');
+            const text = taskText || taskInput.value.trim();
+            
+            if (text === '') return;
+
+            const taskList = document.querySelector('.task-list');
+            const taskItem = document.createElement('div');
+            taskItem.className = 'task-item';
+
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.checked = isCompleted;
+            checkbox.addEventListener('change', function() {
+                const taskText = taskItem.querySelector('.task-text');
+                if (this.checked) {
+                    taskText.classList.add('completed');
+                    completedTasks++;
+                    score += 10;
+                } else {
+                    taskText.classList.remove('completed');
+                    completedTasks--;
+                    score -= 10;
+                }
+                updateProgress();
+            });
+
+            const taskTextSpan = document.createElement('span');
+            taskTextSpan.className = 'task-text';
+            taskTextSpan.textContent = text;
+            if (isCompleted) {
+                taskTextSpan.classList.add('completed');
+                completedTasks++;
+                score += 10;
+            }
+
+            const removeBtn = document.createElement('button');
+            removeBtn.className = 'remove-btn';
+            removeBtn.textContent = '×';
+            removeBtn.addEventListener('click', function() {
+                if (checkbox.checked) {
+                    completedTasks--;
+                    score -= 10;
+                }
+                totalTasks--;
+                taskList.removeChild(taskItem);
+                updateProgress();
+            });
+
+            taskItem.appendChild(checkbox);
+            taskItem.appendChild(taskTextSpan);
+            taskItem.appendChild(removeBtn);
+            taskList.appendChild(taskItem);
+
+            if (!taskText) {
+                taskInput.value = '';
+            }
+            totalTasks++;
+            updateProgress();
+        }
+
+        document.querySelector('.task-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                addTask();
+            }
+        });
+        
+        function clearTasks() {
+            const taskList = document.querySelector('.task-list');
+            taskList.innerHTML = '';
+            totalTasks = 0;
+            completedTasks = 0;
+            score = 0;
+            updateProgress();
+        }
+
+        window.addEventListener('load', showCookieBanner);
+    </script>
+
+</body>
+</html>
